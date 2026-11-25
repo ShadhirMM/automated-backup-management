@@ -33,10 +33,48 @@ Task Scheduler (daily 02:00)                        Watchdog (every 6 h)
 
 ## Sample output
 
-Taken from the end-to-end demo (`scripts\Invoke-Demo.ps1`) running with real restic in CI:
+Taken unchanged from the end-to-end demo (`scripts\Invoke-Demo.ps1`) running with real restic 0.20.0 in GitHub Actions (only the temp path is shortened to `<temp>`). Run 3 shows that retention is skipped when a source fails, so older snapshots that still hold the missing folder's logs are kept:
 
 ```text
-__DEMO_OUTPUT__
+### 1. First backup (recovery test forced)
+[OK] Log backup 'test-backup' on TESTHOST (Backup, run 20261125T202022Z-c1d493)
+  [OK     ] copy:app-logs: 4 file(s), 0.01 MB staged
+  [OK     ] copy:sys-logs: 4 file(s), 0 MB staged
+  [OK     ] backup: Snapshot 40e0afc3: 9 file(s), 9 new, 0 changed
+  [OK     ] verify: 8 file(s) match the manifest; repository check passed (structure + all data read back).
+  [OK     ] retention: Kept 1 snapshot(s), removed 0 (daily 14, weekly 8, monthly 12).
+  [OK     ] restore-test: Restored snapshot 20261125T202022Z-c1d493: 8 file(s) verified by SHA-256.
+  [OK     ] staleness: Last good backup 0.0 h ago.
+exit code: 0
+
+### 2. Next day: one log grew
+[OK] Log backup 'test-backup' on TESTHOST (Backup, run 20261125T202027Z-f5ce6a)
+  [OK     ] copy:app-logs: 4 file(s), 0.01 MB staged
+  [OK     ] copy:sys-logs: 4 file(s), 0 MB staged
+  [OK     ] backup: Snapshot 2f0dd9da: 9 file(s), 0 new, 2 changed
+  [OK     ] verify: 8 file(s) match the manifest; repository check passed (structure + 10% of data read back).
+  [OK     ] retention: Kept 2 snapshot(s), removed 0 (daily 14, weekly 8, monthly 12).
+  [OK     ] staleness: Last good backup 0.0 h ago.
+exit code: 0
+
+### 3. A log folder disappeared
+[ALERT] Log backup 'test-backup' on TESTHOST (Backup, run 20261125T202030Z-6c3f71)
+  [OK     ] copy:app-logs: 4 file(s), 0.01 MB staged
+  [ALERT  ] copy:sys-logs: Source folder not found: <temp>\src\sys
+            -> Check the path exists and the drive/share is connected, and that the task account can read it.
+  [OK     ] backup: Snapshot a9aea376: 5 file(s), 0 new, 1 changed
+  [OK     ] verify: 4 file(s) match the manifest; repository check passed (structure + 10% of data read back).
+  [SKIPPED] retention: Skipped: 1 source(s) failed in this run, so no older snapshot is removed.
+  [OK     ] staleness: Last good backup 0.0 h ago.
+exit code: 2
+
+### 4. Repository file damaged on disk, full verification
+[ALERT] Log backup 'test-backup' on TESTHOST (Verify, run 20261125T202032Z-5b5b14)
+  [ALERT  ] verify: restic check --read-data failed (exit 1).
+            -> Repository data is damaged: do NOT prune; run restic check --read-data, then follow docs/RECOVERY.md (repair section).
+exit code: 2
+
+Demo outcome as expected (exit codes 0,0,2,2).
 ```
 
 ## Exit codes
