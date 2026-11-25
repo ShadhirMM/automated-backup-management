@@ -167,21 +167,21 @@ Describe 'Manifest vs snapshot comparison' {
         $script:M = [pscustomobject]@{ files = @(
                 [pscustomobject]@{ path = 'app/a.log'; size = 10 },
                 [pscustomobject]@{ path = 'app/b.log'; size = 20 }) }
-        function Node($p, $size, $type = 'file') { [pscustomobject]@{ type = $type; path = "/C/w/staging/$p"; size = $size } }
+        function New-TestNode($p, $size, $type = 'file') { [pscustomobject]@{ type = $type; path = "/C/w/staging/$p"; size = $size } }
     }
     It 'passes when every file is present with the same size' {
-        $nodes = @((Node 'app' 0 'dir'), (Node 'app/a.log' 10), (Node 'app/b.log' 20), (Node '_backup-manifest.json' 99))
+        $nodes = @((New-TestNode 'app' 0 'dir'), (New-TestNode 'app/a.log' 10), (New-TestNode 'app/b.log' 20), (New-TestNode '_backup-manifest.json' 99))
         (Compare-ManifestToSnapshot -Manifest $script:M -Nodes $nodes -StagingResticPath '/C/w/staging').Count | Should -Be 0
     }
     It 'reports missing, resized and unexpected files' {
-        $nodes = @((Node 'app/a.log' 11), (Node 'app/c.log' 5))
+        $nodes = @((New-TestNode 'app/a.log' 11), (New-TestNode 'app/c.log' 5))
         $p = Compare-ManifestToSnapshot -Manifest $script:M -Nodes $nodes -StagingResticPath '/C/w/staging'
         $p | Should -Contain 'size differs: app/a.log (manifest 10, snapshot 11)'
         $p | Should -Contain 'missing: app/b.log'
         $p | Should -Contain 'not in manifest: app/c.log'
     }
     It 'ignores files outside the staging folder' {
-        $nodes = @((Node 'app/a.log' 10), (Node 'app/b.log' 20), [pscustomobject]@{ type = 'file'; path = '/C/other/x.log'; size = 1 })
+        $nodes = @((New-TestNode 'app/a.log' 10), (New-TestNode 'app/b.log' 20), [pscustomobject]@{ type = 'file'; path = '/C/other/x.log'; size = 1 })
         (Compare-ManifestToSnapshot -Manifest $script:M -Nodes $nodes -StagingResticPath '/C/w/staging').Count | Should -Be 0
     }
 }

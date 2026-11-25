@@ -36,7 +36,7 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
         function Step($report, $name) { $report.steps | Where-Object Name -eq $name }
 
         $env:RESTIC_PASSWORD = $script:Password
-        (& $script:Restic version) | Write-Information -InformationAction Continue
+        Write-Information -MessageData ((& $script:Restic version) -join " ") -InformationAction Continue
     }
     AfterAll {
         $env:RESTIC_PASSWORD = $null

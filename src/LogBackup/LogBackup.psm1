@@ -424,6 +424,9 @@ function Copy-SourceToStaging {
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Source, [Parameter(Mandatory)][string]$StagingRoot, [Parameter(Mandatory)]$Config)
+    # robocopy/rclone report progress and errors on stderr; with a caller's 'Stop' preference that
+    # would throw before the exit code is read. Exit codes decide the result here.
+    $ErrorActionPreference = 'Continue'
     $dest = Join-Path $StagingRoot $Source.name
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
     $missingStatus = if ($Source.optional) { 'WARNING' } else { 'ALERT' }
