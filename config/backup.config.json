@@ -1,0 +1,61 @@
+{
+  "jobName": "log-backup",
+  "hostTag": "LOGSRV01",
+  "resticPath": "tools\\bin\\restic.exe",
+  "rclonePath": "rclone",
+  "repository": "E:\\Backups\\log-repo",
+  "passwordFile": "secrets\\repo-password.xml",
+  "workDir": "work",
+  "cleanStagingAfterRun": true,
+  "sources": [
+    {
+      "name": "app-logs",
+      "type": "path",
+      "path": "D:\\Logs\\App",
+      "exclude": ["*.tmp", "*.lock"],
+      "optional": false
+    },
+    {
+      "name": "iis-logs",
+      "type": "path",
+      "path": "C:\\inetpub\\logs\\LogFiles",
+      "exclude": [],
+      "optional": true
+    },
+    {
+      "name": "cloud-audit-logs",
+      "type": "rclone",
+      "remote": "gdrive-logs:IT/AuditLogs",
+      "exclude": [],
+      "optional": false
+    }
+  ],
+  "retention": {
+    "keepDaily": 14,
+    "keepWeekly": 8,
+    "keepMonthly": 12
+  },
+  "verify": {
+    "readDataSubsetPercent": 5,
+    "fullReadEveryDays": 30
+  },
+  "restoreTest": {
+    "everyDays": 7,
+    "sampleSize": 0
+  },
+  "thresholds": {
+    "maxHoursSinceSuccess": 26,
+    "minFilesPerSource": 1
+  },
+  "notify": {
+    "webhookEnv": "BACKUP_WEBHOOK_URL",
+    "webhookFile": "secrets\\webhook.xml",
+    "onSuccess": false
+  },
+  "eventLog": {
+    "enabled": false,
+    "source": "LogBackup"
+  },
+  "lockStaleHours": 6,
+  "resticTimeoutMinutes": 120
+}
