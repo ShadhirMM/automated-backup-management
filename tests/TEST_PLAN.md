@@ -34,7 +34,7 @@ CI (GitHub Actions, `windows-latest`) runs everything twice: under **Windows Pow
 | Verify mode | Full data read passes |
 | Restore script | `Restore-LogBackup.ps1 -Source` restores only that source; hashes equal the originals |
 | StaleCheck | OK right after a good backup |
-| Missing source | ALERT, but the other source is still backed up and verified |
+| Missing source | ALERT; the other source is still backed up and verified; **retention skipped**, so the earlier complete snapshot survives (keep-daily 1); "last good backup" not updated |
 | Wrong password | ALERT with the password hint |
 | Missing repository | ALERT with the repository hint; the repository is **not** auto-created |
 | Tampering | Corrupting a pack file → `-Mode Verify` ALERT |

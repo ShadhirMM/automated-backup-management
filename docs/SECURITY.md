@@ -27,7 +27,7 @@ The restic binary is downloaded from the official GitHub release, and its SHA-25
 - SHA-256 manifest of every staged file, stored **inside** the snapshot it describes.
 - After each backup: snapshot listing vs manifest (every file, every size), `restic check`, and a read-back of `readDataSubsetPercent` of the data; a full read every `fullReadEveryDays`.
 - Weekly recovery test: restore + re-hash every file + compare with the manifest.
-- Retention never runs after a failed verification, so a bad snapshot cannot trigger the deletion of good old ones (integration-tested).
+- Retention never runs after a failed verification, or when any source failed to copy, so a bad or partial snapshot cannot trigger the deletion of good old ones (both integration-tested).
 
 ## Webhook
 Anyone with the webhook URL can post to the channel. It is stored with DPAPI (`Set-BackupWebhook.ps1`) or in an environment variable, never in the config or the repository. Messages contain host and folder names, file counts and errors, never log **contents**.

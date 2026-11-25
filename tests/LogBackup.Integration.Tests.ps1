@@ -131,9 +131,12 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
     }
 
     Context 'Failure paths' {
-        It 'missing required source: ALERT, but the other source is still backed up' {
-            $e = New-Env
+        It 'missing required source: ALERT, the other source is still backed up, and retention does not delete the complete snapshot' {
+            $e = New-Env -Retention @{ keepDaily = 1; keepWeekly = 0; keepMonthly = 0 }
             Initialize-Repo $e.Config
+            $good = Invoke-LogBackupRun -ConfigPath $e.ConfigPath -NoNotify 6>$null
+            $good.status | Should -Be 'OK'
+            $goodSuccess = (Get-BackupState -Path (Join-Path $e.Config.workDir 'state\state.json')).lastSuccessUtc
             Remove-Item (Join-Path $e.Root 'src\sys') -Recurse -Force
             $r = Invoke-LogBackupRun -ConfigPath $e.ConfigPath -NoNotify 6>$null
             $r.status | Should -Be 'ALERT'
@@ -142,6 +145,9 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
             (Step $r 'backup').Status | Should -Be 'OK'
             (Step $r 'verify').Status | Should -Be 'OK'
             $r.snapshotId | Should -Not -BeNullOrEmpty
+            (Step $r 'retention').Status | Should -Be 'SKIPPED'
+            @(Get-TestSnapshot $e.Config).Count | Should -Be 2   # keep-daily 1 would otherwise have removed the complete snapshot
+            [string](Get-BackupState -Path (Join-Path $e.Config.workDir 'state\state.json')).lastSuccessUtc | Should -Be ([string]$goodSuccess)
         }
 
         It 'wrong password: ALERT with the password hint, nothing deleted' {

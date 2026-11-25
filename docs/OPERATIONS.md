@@ -32,6 +32,7 @@ Each line is one step. The `->` line is the most likely cause. Full details: `wo
 | `verify` ALERT does not match the manifest | Data changed or was lost between staging and snapshot | Run again with `-ForceRestoreTest`; if it repeats, check the disk and the antivirus exclusions |
 | `verify` / `restore-test` ALERT damaged / hash mismatch | Repository corruption | Follow **RECOVERY.md → Damaged repository**. Retention is skipped automatically while verify fails |
 | `retention` WARNING | forget/prune failed; the backup itself is fine | Check free space and locks; the next run tries again |
+| `retention` SKIPPED "source(s) failed" | On purpose: a source failed, so old snapshots that may still hold its logs are kept | Fix the source; retention resumes on the next complete run |
 | `staleness` ALERT | No good backup within `maxHoursSinceSuccess` | Check the Daily task is enabled, the machine was on, and the latest run report |
 | `run` ALERT could not start | Config error, missing restic or password file, lock held | Follow the hint. Exit code 3 |
 

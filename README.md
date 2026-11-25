@@ -12,7 +12,7 @@ A scheduled **PowerShell** workflow that copies designated log folders (local, n
 | **Encrypted storage** | [restic](https://restic.net) repository: AES-256 + Poly1305, encrypted file names and contents, deduplicated snapshots. The restic binary's hash is pinned. No custom crypto |
 | **Integrity verification** | SHA-256 manifest of every file, stored **inside** the snapshot → after backup, every file and size is checked against the snapshot listing → `restic check` with a data read-back (5% each run, 100% monthly) |
 | **Failure notifications** | Webhook (Slack/Teams/any JSON, 3 attempts), JSON run report, daily log, optional Windows Event Log. Each failed step has a **root-cause hint**. A watchdog task alerts when no good backup was made in 26 h |
-| **Retention** | keep 14 daily / 8 weekly / 12 monthly (configurable), then prune. **Runs only after the new backup is verified** |
+| **Retention** | keep 14 daily / 8 weekly / 12 monthly (configurable), then prune. **Runs only when the new backup is verified and every source was copied**, so a failed or partial run can never cause good old snapshots to be deleted |
 | **Recovery testing** | Weekly automatic restore into a temp folder → every SHA-256 re-checked against the manifest → cleaned up. `Restore-LogBackup.ps1` for real restores, with the same check |
 
 ---
@@ -25,7 +25,7 @@ Task Scheduler (daily 02:00)                        Watchdog (every 6 h)
    lock -> copy sources to staging -> SHA-256 manifest       last good backup older than 26 h? -> ALERT
         -> restic backup (encrypted, tagged run:<id>)
         -> verify: manifest == snapshot listing, restic check (+ data read-back)
-        -> retention: forget + prune          (skipped if verify failed)
+        -> retention: forget + prune          (skipped if verify failed or a source failed)
         -> recovery test when due: restore -> re-hash -> compare -> delete
         -> staleness -> JSON report + log (+ Event Log) -> webhook if WARNING/ALERT
         -> delete the unencrypted staging copy -> exit code

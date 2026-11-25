@@ -31,17 +31,27 @@ try {
         Write-Output "exit code: $($report.exitCode)"
     }
 
-    Show '1. First backup (recovery test forced)' (Invoke-LogBackupRun -ConfigPath $cfgPath -ForceRestoreTest -NoNotify 6>$null)
+    $codes = @()
+    $r = Invoke-LogBackupRun -ConfigPath $cfgPath -ForceRestoreTest -NoNotify 6>$null; $codes += $r.exitCode
+    Show '1. First backup (recovery test forced)' $r
     Add-Content (Join-Path $root 'src\app\app-2026-11-03.log') '2026-11-03T09:00:00Z INFO app request id=999 status=200'
-    Show '2. Next day: one log grew' (Invoke-LogBackupRun -ConfigPath $cfgPath -NoNotify 6>$null)
+    $r = Invoke-LogBackupRun -ConfigPath $cfgPath -NoNotify 6>$null; $codes += $r.exitCode
+    Show '2. Next day: one log grew' $r
     Rename-Item (Join-Path $root 'src\sys') 'sys-moved'
-    Show '3. A log folder disappeared' (Invoke-LogBackupRun -ConfigPath $cfgPath -NoNotify 6>$null)
+    $r = Invoke-LogBackupRun -ConfigPath $cfgPath -NoNotify 6>$null; $codes += $r.exitCode
+    Show '3. A log folder disappeared' $r
     $pack = Get-ChildItem (Join-Path $cfg.repository 'data') -Recurse -File | Sort-Object Length -Descending | Select-Object -First 1
     $pack.IsReadOnly = $false
     $bytes = [IO.File]::ReadAllBytes($pack.FullName)
     for ($i = 100; $i -lt [Math]::Min(400, $bytes.Length); $i++) { $bytes[$i] = $bytes[$i] -bxor 0xFF }
     [IO.File]::WriteAllBytes($pack.FullName, $bytes)
-    Show '4. Repository file damaged on disk, full verification' (Invoke-LogBackupRun -ConfigPath $cfgPath -Mode Verify -NoNotify 6>$null)
+    $r = Invoke-LogBackupRun -ConfigPath $cfgPath -Mode Verify -NoNotify 6>$null; $codes += $r.exitCode
+    Show '4. Repository file damaged on disk, full verification' $r
+    Write-Output ''
+    $expected = '0,0,2,2'
+    if (($codes -join ',') -eq $expected) { Write-Output "Demo outcome as expected (exit codes $expected)."; exit 0 }
+    Write-Output "Unexpected exit codes: $($codes -join ',') (expected $expected)"
+    exit 1
 }
 finally {
     $env:RESTIC_PASSWORD = $oldPw

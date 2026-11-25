@@ -882,9 +882,18 @@ function Invoke-BackupPipeline {
         $Steps.Add($verify)
         if ($verify.Status -ne 'OK') { return }   # never delete old snapshots when the new one is not proven good
         if ($readData -eq 'full') { $State.lastFullReadUtc = (Get-Date).ToUniversalTime().ToString('o') }
-        if ($backup.Status -eq 'OK') { $State.lastSuccessUtc = (Get-Date).ToUniversalTime().ToString('o') }
+        # A run counts as a good backup, and may delete old snapshots, only when every source
+        # was copied. Otherwise a partial snapshot (e.g. a log folder that went missing) could
+        # cause retention to delete an older snapshot that still holds that folder's logs.
+        $copyAlerts = @($Steps | Where-Object { $_.Name -like 'copy:*' -and $_.Status -eq 'ALERT' })
+        if ($backup.Status -eq 'OK' -and $copyAlerts.Count -eq 0) { $State.lastSuccessUtc = (Get-Date).ToUniversalTime().ToString('o') }
 
-        $Steps.Add((Invoke-Retention -Config $Config -Password $Password))
+        if ($copyAlerts.Count -gt 0) {
+            $Steps.Add((New-StepResult 'retention' 'SKIPPED' "Skipped: $($copyAlerts.Count) source(s) failed in this run, so no older snapshot is removed."))
+        }
+        else {
+            $Steps.Add((Invoke-Retention -Config $Config -Password $Password))
+        }
 
         if ($ForceRestoreTest -or (Test-IsDue -LastUtc $State.lastRestoreTestUtc -EveryDays $Config.restoreTest.everyDays)) {
             $rt = Invoke-RestoreTest -Config $Config -Password $Password -SnapshotId $snapshotId -SampleSize ([int]$Config.restoreTest.sampleSize) -TempRoot (Join-Path $Config.workDir 'tmp')
