@@ -54,7 +54,7 @@ $r = Invoke-Restic -Arguments $restoreArgs -Config $config -Password $password
 if ($r.ExitCode -ne 0) { throw "restic restore failed (exit $($r.ExitCode)): $(Get-ResticFailureHint $r.ExitCode $r.StdErr)" }
 
 try {
-    $manifestFile = Get-ChildItem -LiteralPath $work -Recurse -File -Filter '_backup-manifest.json' | Select-Object -First 1
+    $manifestFile = Get-ChildItem -LiteralPath $work -Recurse -Force | Where-Object { -not $_.PSIsContainer -and $_.Name -eq '_backup-manifest.json' } | Select-Object -First 1
     if (-not $manifestFile) { throw 'No manifest in the restored data: cannot verify.' }
     $manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
     $files = @($manifest.files | Where-Object { -not $Source -or $_.source -eq $Source })

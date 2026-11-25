@@ -621,10 +621,10 @@ function Invoke-RestoreTest {
         if ($r.ExitCode -ne 0) {
             return New-StepResult 'restore-test' 'ALERT' "Restore failed (exit $($r.ExitCode))." (Get-ResticFailureHint $r.ExitCode $r.StdErr)
         }
-        $manifestFile = Get-ChildItem -LiteralPath $target -Recurse -File -Filter $script:ManifestName | Select-Object -First 1
+        $restored = @(Get-ChildItem -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue)
+        $manifestFile = $restored | Where-Object { -not $_.PSIsContainer -and $_.Name -eq $script:ManifestName } | Select-Object -First 1
         if (-not $manifestFile) {
-            $restored = @(Get-ChildItem -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue)
-            $sample = ($restored | Select-Object -First 3 | ForEach-Object { $_.FullName.Substring([Math]::Min($target.Length, $_.FullName.Length)) }) -join ', '
+            $sample = ($restored | Where-Object { -not $_.PSIsContainer } | Select-Object -First 4 | ForEach-Object { "$($_.Name) ($($_.Attributes))" }) -join ', '
             $tail = (("$($r.StdErr)`n$($r.StdOut)" -split "`n" | Where-Object { $_.Trim() }) | Select-Object -Last 3) -join ' | '
             return New-StepResult 'restore-test' 'ALERT' "Restored snapshot has no manifest; cannot prove the files are intact. Restored items: $($restored.Count) [$sample]. restic: $tail" 'The snapshot was not made by this tool, or it is damaged.'
         }
