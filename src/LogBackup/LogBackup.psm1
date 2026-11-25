@@ -659,7 +659,7 @@ function Format-BackupReportText {
     param([Parameter(Mandatory)]$Report)
     $lines = @("[$($Report.status)] Log backup '$($Report.jobName)' on $($Report.host) ($($Report.mode), run $($Report.runId))")
     foreach ($s in @($Report.steps)) {
-        if ($s.Status -eq 'SKIPPED') { continue }
+        if ($s.Status -eq 'SKIPPED' -and $s.Message -like 'Not due*') { continue }   # routine skips stay quiet
         $line = "  [{0,-7}] {1}: {2}" -f $s.Status, $s.Name, $s.Message
         if ($s.Hint -and $s.Status -ne 'OK') { $line += "`n            -> $($s.Hint)" }
         $lines += $line

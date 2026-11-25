@@ -297,7 +297,8 @@ Describe 'Notifications' {
             steps = @(
                 (New-StepResult 'copy:app-logs' 'OK' '12 file(s) staged'),
                 (New-StepResult 'backup' 'ALERT' 'restic backup failed (exit 12)' 'Wrong repository password: check ...'),
-                (New-StepResult 'restore-test' 'SKIPPED' 'Not due'))
+                (New-StepResult 'restore-test' 'SKIPPED' 'Not due (every 7 day(s)).'),
+                (New-StepResult 'retention' 'SKIPPED' 'Skipped: 1 source(s) failed in this run, so no older snapshot is removed.'))
         }
     }
     It 'formats a readable message with hints for failed steps only' {
@@ -306,13 +307,14 @@ Describe 'Notifications' {
         $t | Should -Match '\[ALERT  \] backup: restic backup failed'
         $t | Should -Match '-> Wrong repository password'
         $t | Should -Not -Match 'restore-test'
+        $t.Contains('[SKIPPED] retention: Skipped: 1 source') | Should -BeTrue
     }
     It 'posts JSON with text, status and steps' {
         Mock -ModuleName LogBackup Invoke-RestMethod { }
         Send-BackupNotification -Uri 'https://hooks.example/x' -Report $script:Report | Should -Be 'sent'
         Should -Invoke -ModuleName LogBackup Invoke-RestMethod -Times 1 -ParameterFilter {
             $json = [Text.Encoding]::UTF8.GetString($Body) | ConvertFrom-Json
-            $Uri -eq 'https://hooks.example/x' -and $json.status -eq 'ALERT' -and $json.text.StartsWith('[ALERT]') -and $json.steps.Count -eq 3
+            $Uri -eq 'https://hooks.example/x' -and $json.status -eq 'ALERT' -and $json.text.StartsWith('[ALERT]') -and $json.steps.Count -eq 4
         }
     }
     It 'retries 3 times, then reports failure without throwing' {
