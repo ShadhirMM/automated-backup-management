@@ -86,7 +86,8 @@ function Get-BackupConfig {
         $retentionOk = $true
         foreach ($k in 'keepDaily', 'keepWeekly', 'keepMonthly') {
             $v = Get-Prop $r $k
-            if ($v -isnot [int] -or $v -lt 0) { $errors.Add("retention.$k must be a whole number >= 0"); $retentionOk = $false }
+            $isWhole = ($v -is [int] -or $v -is [long])
+            if (-not $isWhole -or $v -lt 0) { $errors.Add("retention.$k must be a whole number >= 0"); $retentionOk = $false }
         }
         if ($retentionOk -and ($r.keepDaily + $r.keepWeekly + $r.keepMonthly) -eq 0) { $errors.Add('retention keeps nothing: at least one keep value must be above 0') }
     }
@@ -622,7 +623,10 @@ function Invoke-RestoreTest {
         }
         $manifestFile = Get-ChildItem -LiteralPath $target -Recurse -File -Filter $script:ManifestName | Select-Object -First 1
         if (-not $manifestFile) {
-            return New-StepResult 'restore-test' 'ALERT' 'Restored snapshot has no manifest; cannot prove the files are intact.' 'The snapshot was not made by this tool, or it is damaged.'
+            $restored = @(Get-ChildItem -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue)
+            $sample = ($restored | Select-Object -First 3 | ForEach-Object { $_.FullName.Substring([Math]::Min($target.Length, $_.FullName.Length)) }) -join ', '
+            $tail = (("$($r.StdErr)`n$($r.StdOut)" -split "`n" | Where-Object { $_.Trim() }) | Select-Object -Last 3) -join ' | '
+            return New-StepResult 'restore-test' 'ALERT' "Restored snapshot has no manifest; cannot prove the files are intact. Restored items: $($restored.Count) [$sample]. restic: $tail" 'The snapshot was not made by this tool, or it is damaged.'
         }
         $manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
         $root = $manifestFile.DirectoryName

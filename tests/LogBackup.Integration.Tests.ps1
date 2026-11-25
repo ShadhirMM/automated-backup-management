@@ -50,7 +50,7 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
         }
 
         It 'first run is OK with every step passing' {
-            ($script:R1.steps | ForEach-Object { "$($_.Name)=$($_.Status): $($_.Message)" }) -join "`n" | Write-Information -InformationAction Continue
+            Write-Information -MessageData (($script:R1.steps | ForEach-Object { "$($_.Name)=$($_.Status): $($_.Message)" }) -join "`n") -InformationAction Continue
             $script:R1.status | Should -Be 'OK'
             $script:R1.exitCode | Should -Be 0
             (Step $script:R1 'copy:app-logs').Status | Should -Be 'OK'
@@ -75,7 +75,7 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
         }
 
         It 'tags the snapshot with job and run id, and verified every file' {
-            $snaps = Get-TestSnapshot $script:E.Config
+            $snaps = @(Get-TestSnapshot $script:E.Config)
             $snaps.Count | Should -Be 1
             $snaps[0].tags | Should -Contain 'logbackup'
             $snaps[0].tags | Should -Contain "run:$($script:R1.runId)"
@@ -100,7 +100,7 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
             $r2 = Invoke-LogBackupRun -ConfigPath $script:E.ConfigPath -NoNotify 6>$null
             $r2.status | Should -Be 'OK'
             (Step $r2 'restore-test').Status | Should -Be 'SKIPPED'
-            (Get-TestSnapshot $script:E.Config).Count | Should -Be 2
+            @(Get-TestSnapshot $script:E.Config).Count | Should -Be 2
             (Step $r2 'backup').Data.summary.files_changed | Should -BeGreaterOrEqual 1
         }
 
@@ -202,7 +202,7 @@ Describe 'LogBackup with real restic' -Tag 'Integration' -Skip:(-not $script:Hav
             $r = Invoke-LogBackupRun -ConfigPath $e.ConfigPath -NoNotify 6>$null
             $r.status | Should -Be 'ALERT'
             Step $r 'retention' | Should -BeNullOrEmpty
-            (Get-TestSnapshot $e.Config).Count | Should -Be 2   # the older good snapshot was NOT forgotten
+            @(Get-TestSnapshot $e.Config).Count | Should -Be 2   # the older good snapshot was NOT forgotten
         }
     }
 

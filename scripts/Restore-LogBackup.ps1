@@ -34,13 +34,13 @@ $snapArgs = @('snapshots', '--json', '--tag', 'logbackup')
 if ($PSCmdlet.ParameterSetName -eq 'Restore' -and $Snapshot -ne 'latest') { $snapArgs += $Snapshot }
 $snaps = Invoke-Restic -Arguments $snapArgs -Config $config -Password $password
 if ($snaps.ExitCode -ne 0) { throw "Cannot list snapshots (exit $($snaps.ExitCode)): $(Get-ResticFailureHint $snaps.ExitCode $snaps.StdErr)" }
-$list = @(ConvertFrom-ResticJson $snaps.StdOut | ForEach-Object { $_ }) | Sort-Object time
+$snapList = @(@(ConvertFrom-ResticJson $snaps.StdOut | ForEach-Object { $_ }) | Sort-Object time)
 if ($List) {
-    $list | ForEach-Object { [pscustomobject]@{ Id = $_.short_id; Time = $_.time; Host = $_.hostname; Tags = ($_.tags -join ',') } }
+    $snapList | ForEach-Object { [pscustomobject]@{ Id = $_.short_id; Time = $_.time; Host = $_.hostname; Tags = ($_.tags -join ',') } }
     return
 }
-if (-not $list) { throw "No snapshot found ($Snapshot)." }
-$snap = $list[-1]
+if (-not $snapList) { throw "No snapshot found ($Snapshot)." }
+$snap = $snapList[-1]
 
 $dest = Join-Path $Target $snap.short_id
 if ((Test-Path -LiteralPath $dest) -and (Get-ChildItem -LiteralPath $dest -Force | Select-Object -First 1)) { throw "Target $dest is not empty; choose another folder." }
